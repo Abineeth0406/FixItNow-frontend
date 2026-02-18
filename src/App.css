@@ -1,0 +1,19 @@
+/* App-level styles only */
+
+/* Prevent accidental overflow */
+.app-container {
+  width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Optional reusable section padding */
+.section {
+  padding: 5rem 2rem;
+}
+
+/* Optional container utility */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
