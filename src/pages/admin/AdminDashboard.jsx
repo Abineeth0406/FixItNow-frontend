@@ -1,21 +1,58 @@
 import { useEffect, useState } from "react";
 import api from "../../services/api";
 
-const AdminDashboard = ({ filterStatus }) => {
+const AdminDashboard = ({ filterStatus, showSplitView }) => {
 
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [logoutDialog, setLogoutDialog] = useState(false);
-
-  // const [activeTab, setActiveTab] = useState("dashboard"); // dashboard | approved | rejected
+const [departments, setDepartments] = useState([]);
+  const [sortBy, setSortBy] = useState("");
+// const [complaints, setComplaints] = useState([]);
 
   const [dialog, setDialog] = useState({
-    show: false,
-    type: "", // approve | reject
-    complaintId: null,
-    departmentPhone: "",
-  });
+  show: false,
+  type: "",
+  complaintId: null,
+  departmentEmail: "",
+  priority: "LOW",
+});
 
+
+// const verifyComplaint = async (id) => {
+//   try {
+//     await api.put(`/admin/verify/${id}`);
+
+//     setComplaints(prev =>
+//       prev.map(c =>
+//         c.id === id
+//           ? { ...c, status: "COMPLETED" }
+//           : c
+//       )
+//     );
+
+//   } catch (err) {
+//     console.error(err);
+//   }
+// };
+
+const verifyComplaint = async (id) => {
+  try {
+    await api.put(`/api/admin/complaints/${id}/resolve`); // Make sure backend marks it resolved
+    fetchComplaints(); // Refresh list
+  } catch (err) {
+    console.error("Error marking complaint resolved:", err);
+  }
+};
+
+const fetchDepartments = async () => {
+  try {
+    const { data } = await api.get("/api/admin/complaints/departments");
+    setDepartments(data);
+  } catch (error) {
+    console.error("Error fetching departments:", error);
+  }
+};
 
 // const [departmentDialog, setDepartmentDialog] = useState({
 //   show: false,
@@ -39,20 +76,41 @@ const AdminDashboard = ({ filterStatus }) => {
   };
 
   useEffect(() => {
+  fetchComplaints();
+  fetchDepartments();
+
+  const interval = setInterval(() => {
     fetchComplaints();
-  }, []);
+  }, 5000);
+
+  return () => clearInterval(interval);
+}, []);
+
+
+
+
+
+
+
+
+
 
   // Approve complaint
-  const approveComplaint = async (id, departmentPhone) => {
-    try {
-      await api.put(`/api/admin/complaints/${id}/approve`, {
-        departmentPhone,
-      });
-      fetchComplaints();
-    } catch (error) {
-      console.error("Error approving complaint:", error);
-    }
-  };
+  const approveComplaint = async (id, departmentEmail, priority) => {
+  try {
+    await api.put(`/api/admin/complaints/${id}/approve`, {
+      departmentEmail,
+      priority,
+    });
+
+    fetchComplaints();
+  } catch (error) {
+    console.error("Error approving complaint:", error);
+  }
+};
+
+
+
 
   // Reject complaint
   const rejectComplaint = async (id) => {
@@ -64,37 +122,49 @@ const AdminDashboard = ({ filterStatus }) => {
     }
   };
 
-  // Change resolved status
-  // const toggleResolved = async (id, currentStatus) => {
-  //   try {
-  //     await api.put(`/api/admin/complaints/${id}/resolve`, {
-  //       resolved: !currentStatus,
-  //     });
-  //     fetchComplaints();
-  //   } catch (error) {
-  //     console.error("Error updating resolve status:", error);
-  //   }
-  // };
-
   if (loading)
+
+
     return (
       <p className="text-center mt-6 text-gray-500">
         Loading complaints...
       </p>
     );
 
-  // Filter based on tab
-  // const filteredComplaints = complaints.filter((c) => {
-  //   if (activeTab === "dashboard") return c.status === "PENDING";
-  //   if (activeTab === "approved") return c.status === "APPROVED";
-  //   if (activeTab === "rejected") return c.status === "REJECTED";
-  //   return true;
-  // });
 
-  const filteredComplaints = filterStatus
-  ? complaints.filter((c) => c.status === filterStatus)
-  : complaints;
 
+
+const filteredComplaints = complaints
+  .filter((c) => {
+    if (filterStatus) return c.status === filterStatus;
+    return c.status === "PENDING"
+  })
+  .sort((a, b) => {
+    if (sortBy === "UPVOTES")
+      return (b.upvotesCount || 0) - (a.upvotesCount || 0);
+
+    if (sortBy === "PRIORITY_HIGH_LOW") {
+      const priorityOrder = { HIGH: 3, MEDIUM: 2, LOW: 1 };
+      return priorityOrder[b.priority] - priorityOrder[a.priority];
+    }
+
+    if (sortBy === "PRIORITY_LOW_HIGH") {
+      const priorityOrder = { HIGH: 3, MEDIUM: 2, LOW: 1 };
+      return priorityOrder[a.priority] - priorityOrder[b.priority];
+    }
+
+
+
+ 
+
+
+    return 0;
+  });
+
+  
+
+console.log("Filtered Complaints:", filteredComplaints);
+console.log("showSplitView:", showSplitView);
 
 
   return (
@@ -152,40 +222,90 @@ const AdminDashboard = ({ filterStatus }) => {
           + Add Department
         </button> */}
 
+
+<div className="mb-6">
+  <select
+    value={sortBy}
+    onChange={(e) => setSortBy(e.target.value)}
+    className="border rounded-lg px-4 py-2 shadow"
+  >
+    <option value="" disabled>
+      Sort By
+    </option>
+    <option value="NONE">None</option>
+    <option value="UPVOTES">Most Upvoted</option>
+    <option value="PRIORITY_HIGH_LOW">Priority High → Low</option>
+    <option value="PRIORITY_LOW_HIGH">Priority Low → High</option>
+  </select>
+</div>
+
+
+
+
         {filteredComplaints.length === 0 ? (
           <div className="bg-gray-100 p-8 rounded-xl text-center text-gray-500 shadow">
             No complaints available.
           </div>
         ) : (
           <div className="space-y-6">
+
+
             {filteredComplaints.map((c) => (
               <div
                 key={c.id}
-                className="bg-white border border-gray-200 rounded-xl shadow-md p-6"
+                className="bg-white border border-gray-200 rounded-xl shadow-md p-6 hover:shadow-lg transition duration-300"
               >
-                <div className="flex flex-col md:flex-row md:justify-between gap-6">
+                <div className="flex flex-col md:flex-row gap-6">
 
-                  {/* LEFT SIDE */}
-                  <div className="flex-1">
-                    <h2 className="text-xl font-semibold text-green-600">
-                      {c.title}
-                    </h2>
+  {/* LEFT SIDE */}
+  <div className="flex-1">
 
-                    <p className="mt-2 text-gray-700">{c.description}</p>
+    {/* NORMAL IMAGE VIEW */}
+{["PENDING", "REJECTED", "RESOLVED"].includes(c.status) && c.imagePath && (
+  <img
+    src={`${import.meta.env.VITE_API_URL}/${c.imagePath}`}
+    alt="Complaint"
+    className="w-full max-h-60 object-cover rounded-lg border mb-4"
+  />
+)}
+
+    <h2 className="text-xl font-semibold text-green-600">
+      {c.title}
+    </h2>
+
+    <p className="mt-2 text-gray-700">{c.description}</p>
 
                     <p className="text-sm text-gray-500 mt-2">
-                      📍 {c.location}
+                      📍 {c.location?.latitude}, {c.location?.longitude}
                     </p>
 
                     <p className="text-sm text-gray-500 mt-1">
-                      👍 Upvotes: {c.upvotes || 0}
+                      👍 Upvotes: {c.upvotesCount || 0}
                     </p>
+
+
+                   <p className="text-sm mt-2">
+  🚨 Priority:{" "}
+  <span
+    className={`px-2 py-1 rounded-full text-xs font-semibold ${
+      c.priority === "HIGH"
+        ? "bg-red-100 text-red-600"
+        : c.priority === "MEDIUM"
+        ? "bg-yellow-100 text-yellow-600"
+        : "bg-green-100 text-green-600"
+    }`}
+  >
+    {c.priority}
+  </span>
+</p>
 
                     {/* STATUS BADGE */}
                     <div className="mt-3 flex gap-2 items-center">
                       <span className="px-3 py-1 text-xs rounded-full font-medium bg-blue-100 text-blue-600">
                         {c.status}
                       </span>
+
+                      
 
                       {c.status === "APPROVED" && (
                         <span
@@ -199,77 +319,126 @@ const AdminDashboard = ({ filterStatus }) => {
                           {c.resolved ? "Resolved" : "Not Resolved"}
                         </span>
                       )}
+
+                     
                     </div>
 
-                    {c.imagePath && (
-                      <img
-                        src={`http://localhost:8080/${c.imagePath}`}
-                        alt="Complaint"
-                        className="mt-4 w-60 rounded-lg border"
-                      />
-                    )}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{showSplitView && ["APPROVED", "IN_PROGRESS"].includes(c.status) && (
+  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+    {/* USER UPLOADED IMAGE */}
+    <div>
+      <p className="text-sm font-semibold mb-1 text-gray-600">User Uploaded</p>
+      {c.imagePath ? (
+        <img
+          src={`${import.meta.env.VITE_API_URL}/${c.imagePath}`}
+          className="w-full rounded-lg border"
+        />
+      ) : (
+        <div className="h-32 flex items-center justify-center bg-gray-100 rounded-lg text-gray-400">
+          No Image
+        </div>
+      )}
+    </div>
+
+    {/* DEPARTMENT EVIDENCE */}
+    <div>
+      <p className="text-sm font-semibold mb-1 text-gray-600">Department Evidence</p>
+      {c.resolvedImageUrl ? (
+       
+
+
+        <img
+  src={`${import.meta.env.VITE_API_URL}/${c.resolvedImageUrl}`}
+  className="w-full rounded-lg border"
+  onError={() => console.log("IMAGE FAILED:", c.resolvedImageUrl)}
+  onLoad={() => console.log("IMAGE LOADED:", c.resolvedImageUrl)}
+/>
+      ) : (
+        <div className="h-32 flex items-center justify-center bg-gray-100 rounded-lg text-gray-400">
+          Not Uploaded Yet
+        </div>
+      )}
+
+      {/* RESOLVE BUTTON */}
+      {c.status === "IN_PROGRESS" && c.resolvedImageUrl && (
+        <button
+          onClick={() => verifyComplaint(c.id)}  // This should call your API to mark resolved
+          className="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+        >
+          Mark as Resolved
+        </button>
+      )}
+    </div>
+  </div>
+)}
                   </div>
 
-                  {/* RIGHT SIDE */}
-                  <div className="flex flex-col gap-4">
+                 {/* RIGHT SIDE */}
+<div className="flex flex-col justify-end h-full">
 
-                    {/* APPROVE / REJECT only for PENDING */}
-                    {c.status === "PENDING" && (
-                      <div className="flex gap-3">
-                        <button
-                          onClick={() =>
-                            setDialog({
-                              show: true,
-                              type: "approve",
-                              complaintId: c.id,
-                              departmentPhone: "",
-                            })
-                          }
-                          className="px-4 py-2 bg-green-600 text-white rounded-full"
-                        >
-                          Approve & Assign
-                        </button>
+  {c.status === "PENDING" && (
+    <div className="flex gap-3 mt-auto">
+      <button
+        onClick={() =>
+          setDialog({
+            show: true,
+            type: "approve",
+            complaintId: c.id,
+            departmentEmail: "",
+            priority: "MEDIUM",
+          })
+        }
+        className="px-4 py-2 bg-green-600 text-white rounded-full"
+      >
+        Approve & Assign
+      </button>
 
-                        <button
-                          onClick={() =>
-                            setDialog({
-                              show: true,
-                              type: "reject",
-                              complaintId: c.id,
-                            })
-                          }
-                          className="px-4 py-2 bg-red-600 text-white rounded-full"
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    )}
+      <button
+        onClick={() =>
+          setDialog({
+            show: true,
+            type: "reject",
+            complaintId: c.id,
+          })
+        }
+        className="px-4 py-2 bg-red-600 text-white rounded-full"
+      >
+        Reject
+      </button>
+    </div>
+  )}
 
-                    {/* RESOLVE BUTTON for APPROVED */}
-                    {/* {c.status === "APPROVED" && (
-                      <button
-                        onClick={() =>
-                          toggleResolved(c.id, c.resolved)
-                        }
-                        className={`px-4 py-2 rounded-full text-white ${
-                          c.resolved
-                            ? "bg-yellow-500"
-                            : "bg-green-600"
-                        }`}
-                      >
-                        {c.resolved
-                          ? "Mark as Not Resolved"
-                          : "Mark as Resolved"}
-                      </button>
-                    )} */}
-
-               
-
-
-                  </div>
+</div>
+                        
                 </div>
               </div>
             ))}
+
+
+
+
+
+
+
+
           </div>
         )}
       </div>
@@ -285,18 +454,39 @@ const AdminDashboard = ({ filterStatus }) => {
                   Assign Department
                 </h2>
 
-                <input
-                  type="text"
-                  placeholder="Enter Department Phone"
-                  value={dialog.departmentPhone}
-                  onChange={(e) =>
-                    setDialog({
-                      ...dialog,
-                      departmentPhone: e.target.value,
-                    })
-                  }
-                  className="w-full border rounded-lg p-2 mb-4"
-                />
+                <select
+  value={dialog.departmentEmail}
+  onChange={(e) =>
+    setDialog({
+      ...dialog,
+      departmentEmail: e.target.value,
+    })
+  }
+  className="w-full border rounded-lg p-2 mb-4"
+>
+  <option value="">Select Department</option>
+
+  {departments.map((dept) => (
+    <option key={dept.id} value={dept.email}>
+      {dept.fullName} ({dept.email})
+    </option>
+  ))}
+</select>
+
+                <select
+  value={dialog.priority}
+  onChange={(e) =>
+    setDialog({
+      ...dialog,
+      priority: e.target.value,
+    })
+  }
+  className="w-full border rounded-lg p-2 mb-4"
+>
+  <option value="LOW">LOW</option>
+  <option value="MEDIUM">MEDIUM</option>
+  <option value="HIGH">HIGH</option>
+</select>
 
                 <div className="flex justify-center gap-4">
                   <button
@@ -310,7 +500,9 @@ const AdminDashboard = ({ filterStatus }) => {
                     onClick={async () => {
                       await approveComplaint(
                         dialog.complaintId,
-                        dialog.departmentPhone
+                        dialog.departmentEmail,
+                        dialog.priority
+
                       );
                       setDialog({ show: false });
                     }}

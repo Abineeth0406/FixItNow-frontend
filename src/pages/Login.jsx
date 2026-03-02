@@ -2,9 +2,9 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import logoround from "../assets/logo-round.png";
-const Login = () => {
-  const [phone, setPhone] = useState("");
-
+const Login = ({ type }) => {
+  const [identifier, setIdentifier] = useState("");
+  const [adminId, setAdminId] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
@@ -15,40 +15,52 @@ const Login = () => {
 });
 
 
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
   e.preventDefault();
 
   try {
-    const res = await api.post("/api/auth/login", {
-      phone,
-      password,
-    });
+    let endpoint = "";
+    let payload = {};
 
+    if (type === "USER") {
+  endpoint = "/api/auth/user/login";
+  payload = { email: identifier, password };
+}
+
+if (type === "ADMIN") {
+  endpoint = "/api/auth/admin/login";
+  payload = { email: identifier, password };
+}
+
+if (type === "DEPARTMENT_AUTHORITY") {
+  endpoint = "/api/auth/department/login";
+  payload = { email: identifier, password };
+}
+
+    const res = await api.post(endpoint, payload);
+console.log("LOGIN RESPONSE:", res.data);
     const { accessToken, refreshToken, role } = res.data;
 
-    // Store tokens
-    localStorage.setItem("accessToken", accessToken);
+    localStorage.setItem("token", accessToken);
     localStorage.setItem("refreshToken", refreshToken);
     localStorage.setItem("role", role);
 
-    // Role-based redirect
-    if (role === "USER") {
-      navigate("/user/dashboard");
-    } else if (role === "ADMIN") {
-      navigate("/admin/dashboard");
-    } else if (role === "DEPARTMENT_AUTHORITY") {
+    if (role === "USER") navigate("/user/dashboard");
+    if (role === "ADMIN") navigate("/admin/dashboard");
+    if (role === "DEPARTMENT_AUTHORITY")
       navigate("/department/dashboard");
-    }
 
   } catch (error) {
     setDialog({
-  show: true,
-  type: "error",
-  message: error.response?.data?.message || "Invalid Credentials",
-});
-
+      show: true,
+      type: "error",
+      message: error.response?.data?.message || "Invalid Credentials",
+    });
   }
 };
+
+
+
 
 return (
   <div className="min-h-screen flex flex-col md:flex-row bg-[#F4F7FA]">
@@ -62,10 +74,10 @@ return (
 
 
     {/* BLUE PANEL */}
-<div className="relative w-full md:w-1/2 bg-gradient-to-b from-[#0B1C2D] to-[#12344D] text-white flex flex-col justify-center items-center px-8 md:px-16 py-20 md:py-0 overflow-hidden">
+<div className="relative w-full md:w-1/2 bg-gradient-to-b from-[#0B1C2D] to-[#12344D] text-white flex flex-col justify-center items-center px-8 md:px-16 py-20 md:py-0 pb-32 overflow-hidden">
 
   {/* Content Wrapper */}
-  <div className="flex flex-col items-center text-center space-y-6">
+  <div className="flex flex-col items-center text-center space-y-6 z-10">
 
     {/* Logo */}
     <img
@@ -126,22 +138,41 @@ return (
         className="bg-white w-full max-w-md p-10 rounded-2xl shadow-xl"
       >
         <h2 className="text-2xl md:text-3xl font-bold text-[#0B1C2D] mb-2">
-          Login
-        </h2>
+  {type} LOGIN
+</h2>
 
         <p className="text-gray-500 mb-8">
           Access your account
         </p>
 
         <div className="space-y-5">
-          <input
-            type="text"
-            placeholder="Phone Number"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className="w-full border-b-2 border-gray-300 py-3 focus:outline-none focus:border-green-500 transition"
-            required
-          />
+
+
+  {type === "ADMIN" && (
+  <input
+    type="text"
+    placeholder="Admin ID"
+    value={adminId}
+    onChange={(e) => setAdminId(e.target.value)}
+    className="w-full border-b-2 border-gray-300 py-3 focus:outline-none focus:border-green-500 transition"
+  />
+)}
+
+
+ <input
+  type="email"
+  placeholder={
+    type === "USER"
+      ? "Email Address"
+      : type === "ADMIN"
+      ? "Email Address"
+      : "Department Code"
+  }
+  value={identifier}
+  onChange={(e) => setIdentifier(e.target.value)}
+  className="w-full border-b-2 border-gray-300 py-3 focus:outline-none focus:border-green-500 transition"
+  required
+/>
 
           <input
             type="password"
@@ -157,7 +188,7 @@ return (
           type="submit"
           className="w-full mt-8 bg-green-500 text-white py-3 rounded-full font-semibold hover:bg-green-600 transition shadow-md"
         >
-          Login
+        Login
         </button>
 
         <p className="text-sm text-gray-500 mt-6 text-center">

@@ -36,35 +36,37 @@ const Home = () => {
   }, []);
 
   const navLinkStyle = (id) =>
-    `relative cursor-pointer transition duration-300 ${
-      active === id ? "text-green-400" : "text-gray-200"
-    } after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:bg-green-400 after:transition-all after:duration-300 ${
-      active === id ? "after:w-full" : "after:w-0 hover:after:w-full"
-    }`;
+  `relative cursor-pointer transition-colors duration-300 ${
+    active === id ? "text-green-400" : "text-gray-200"
+  } after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:bg-green-400
+  after:transition-all after:duration-500 after:ease-out ${
+    active === id ? "after:w-full" : "after:w-0 hover:after:w-full"
+  }`;
 
   return (
     <div className="relative w-full font-sans text-white">
 
       {/* BACKGROUND */}
       <div
-        className="fixed inset-0 -z-10 bg-cover bg-center"
-        style={{ backgroundImage: `url(${heroImage})` }}
-      />
+  className="fixed inset-0 -z-10 bg-cover bg-center bg-fixed"
+  style={{ backgroundImage: `url(${heroImage})` }}
+/>
       <div className="fixed inset-0 -z-10 bg-gradient-to-b from-[#0B1C2D]/95 via-[#0B1C2D]/90 to-[#07111B]/95" />
 
       {/* ================= NAVBAR ================= */}
       <nav
-  className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${
-
-          scrolled
-            ? "bg-[#0B1C2D]/90 h-16 shadow-xl"
-: "bg-[#0B1C2D]/70 h-16"
-
-
-
-        } backdrop-blur-md border-b border-white/10`}
-      >
+  className={`fixed top-0 left-0 w-full z-50 
+  transition-[background,box-shadow] duration-500 ease-out
+  ${
+    scrolled
+      ? "bg-[#0B1C2D]/90 shadow-xl"
+      : "bg-[#0B1C2D]/60"
+  }
+  h-16 backdrop-blur-md border-b border-white/10`}
+>
         <div className="max-w-7xl mx-auto flex justify-between items-center h-full px-6 md:px-10 overflow-visible">
+
+          <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-green-400 to-transparent opacity-40"></div>
 
 
           {/* Logo */}

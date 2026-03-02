@@ -1,14 +1,16 @@
 import { useState } from "react";
-import AdminDashboard from "./AdminDashboard";
+import DepartmentDashboard from "./DepartmentDashboard";
 
-const ManageComplaints = () => {
+const DepartmentManageComplaints = () => {
+
   const [view, setView] = useState("APPROVED");
 
   return (
     <div className="max-w-6xl mx-auto">
 
       {/* TOP FILTER BUTTONS */}
-      <div className="flex gap-3 mb-6">
+      <div className="flex flex-wrap gap-3 mb-6">
+
         <button
           onClick={() => setView("APPROVED")}
           className={`px-5 py-2 rounded-full ${
@@ -17,11 +19,10 @@ const ManageComplaints = () => {
               : "bg-gray-200"
           }`}
         >
-          Approved
+          Assigned
         </button>
 
-
-          <button
+        <button
           onClick={() => setView("IN_PROGRESS")}
           className={`px-5 py-2 rounded-full ${
             view === "IN_PROGRESS"
@@ -35,35 +36,20 @@ const ManageComplaints = () => {
         <button
           onClick={() => setView("RESOLVED")}
           className={`px-5 py-2 rounded-full ${
-            view === "RESOLVED" ? "bg-emerald-600 text-white" : "bg-gray-200"
-          }`}
-        >
-          Resolved
-        </button>
-
-
-        <button
-          onClick={() => setView("REJECTED")}
-          className={`px-5 py-2 rounded-full ${
-            view === "REJECTED"
-              ? "bg-red-600 text-white"
+            view === "RESOLVED"
+              ? "bg-green-700 text-white"
               : "bg-gray-200"
           }`}
         >
-          Rejected
+          Completed
         </button>
 
-        
       </div>
 
-      {/* ADMIN DASHBOARD */}
-      <AdminDashboard
-        filterStatus={view}
-        showSplitView={["APPROVED", "IN_PROGRESS"].includes(view)}
-      />
+      <DepartmentDashboard filterStatus={view} />
 
     </div>
   );
 };
 
-export default ManageComplaints;
+export default DepartmentManageComplaints;

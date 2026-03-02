@@ -14,10 +14,25 @@ const CreateIssue = () => {
   message: "",
 });
 
+const [toast, setToast] = useState({
+  show: false,
+  type: "", // success | error
+  message: "",
+});
+
 
   const getLocation = () => {
   if (!navigator.geolocation) {
-    alert("Geolocation not supported");
+    setToast({
+      show: true,
+      type: "error",
+      message: "Geolocation not supported by your browser.",
+    });
+
+    setTimeout(() => {
+      setToast((prev) => ({ ...prev, show: false }));
+    }, 3000);
+
     return;
   }
 
@@ -25,13 +40,30 @@ const CreateIssue = () => {
     (position) => {
       setLatitude(position.coords.latitude.toString());
       setLongitude(position.coords.longitude.toString());
+
+      setToast({
+        show: true,
+        type: "success",
+        message: "Location detected successfully!",
+      });
+
+      setTimeout(() => {
+        setToast((prev) => ({ ...prev, show: false }));
+      }, 3000);
     },
     () => {
-      alert("Unable to fetch location");
+      setToast({
+        show: true,
+        type: "error",
+        message: "Unable to fetch location.",
+      });
+
+      setTimeout(() => {
+        setToast((prev) => ({ ...prev, show: false }));
+      }, 3000);
     }
   );
 };
-
   
 
 
@@ -209,6 +241,31 @@ formData.append("longitude", longitude);
         OK
       </button>
 
+    </div>
+  </div>
+)}
+
+
+{/* TOAST NOTIFICATION */}
+{toast.show && (
+  <div className="fixed bottom-6 right-6 z-50">
+    <div
+      className={`flex items-center justify-between min-w-[250px] px-4 py-3 rounded-lg shadow-lg text-white ${
+        toast.type === "error"
+          ? "bg-red-600"
+          : "bg-green-600"
+      }`}
+    >
+      <span className="text-sm font-medium">
+        {toast.message}
+      </span>
+
+      <button
+        onClick={() => setToast({ ...toast, show: false })}
+        className="ml-4 text-white font-bold"
+      >
+        ✕
+      </button>
     </div>
   </div>
 )}

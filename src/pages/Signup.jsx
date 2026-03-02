@@ -13,17 +13,41 @@ const [longitude, setLongitude] = useState(null);
 const [areaName, setAreaName] = useState("");
 
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [phoneError, setPhoneError] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [passwordStrength, setPasswordStrength] = useState("");
+
+  const [loading, setLoading] = useState(false);
+
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+const [passwordError, setPasswordError] = useState("");
   const [dialog, setDialog] = useState({
   show: false,
   type: "", // success | error
   message: "",
 });
 
+const [toast, setToast] = useState({
+  show: false,
+  type: "", // success | error
+  message: "",
+});
+
+
 const getLocation = () => {
   if (!navigator.geolocation) {
-    alert("Geolocation not supported");
+    setToast({
+      show: true,
+      type: "error",
+      message: "Geolocation not supported by your browser.",
+    });
+  setTimeout(() => {
+      setToast((prev) => ({ ...prev, show: false }));
+    }, 3000);
+
     return;
   }
 
@@ -32,52 +56,128 @@ const getLocation = () => {
       setLatitude(position.coords.latitude);
       setLongitude(position.coords.longitude);
       setAreaName("Detected Location");
+
+      setToast({
+        show: true,
+        type: "success",
+        message: "Location detected successfully!",
+      });
     },
     () => {
-      alert("Unable to fetch location");
+      setToast({
+        show: true,
+        type: "error",
+        message: "Unable to fetch location.",
+      });
     }
   );
 };
 
 
+const validatePhone = (value) => {
+  const phoneRegex = /^[6-9]\d{9}$/; // Indian 10-digit mobile format
 
-  const handleSubmit = async (e) => {
+  if (!phoneRegex.test(value)) {
+    setPhoneError("Invalid phone number");
+  } else {
+    setPhoneError("");
+  }
+};
+
+
+const validatePassword = () => {
+  if (password.length < 8) {
+    setPasswordError("Password must be at least 8 characters long");
+    return false;
+  }
+
+  if (password !== confirmPassword) {
+    setPasswordError("Passwords do not match");
+    return false;
+  }
+
+  setPasswordError("");
+  return true;
+};
+
+
+ const handleSubmit = async (e) => {
   e.preventDefault();
+  setEmailError("");
+setPhoneError("");
+setPasswordError("");
+
+  if (loading) return; // 🛑 extra safety
+
+  if (!validatePassword()) return;
+
+  if (phoneError || phone.length !== 10) {
+    setDialog({
+      show: true,
+      type: "error",
+      message: "Please enter a valid phone number.",
+    });
+    return;
+  }
 
   try {
-  await api.post("/api/auth/signup", {
-    fullName: name,
-    phone,
-    password,
-    latitude,
-  longitude,
-  areaName,
-  });
+    setLoading(true); // ✅ start loading
 
-  setDialog({
-    show: true,
-    type: "success",
-    message: "Signup successful! Please login.",
-  });
+    await api.post("/api/auth/signup", {
+      fullName: name,
+      email,
+      phone,
+      password,
+      latitude,
+      longitude,
+      areaName,
+    });
 
-} catch (error) {
-  setDialog({
-    show: true,
-    type: "error",
-    message: error.response?.data?.message || "Signup failed",
-  });
-}
+    setDialog({
+      show: true,
+      type: "success",
+      message: "Signup successful! Please login.",
+    });
 
+  } catch (error) {
+  const errors = error.response?.data;
+
+  if (errors && typeof errors === "object") {
+
+    if (errors.email) setEmailError(errors.email);
+    if (errors.phone) setPhoneError(errors.phone);
+    if (errors.password) setPasswordError(errors.password);
+
+    // If backend sends unknown error
+    if (errors.error) {
+      setDialog({
+        show: true,
+        type: "error",
+        message: errors.error,
+      });
+    }
+
+  } else {
+    // Unexpected system error
+    setDialog({
+      show: true,
+      type: "error",
+      message: "Something went wrong. Please try again.",
+    });
+  }
+}finally {
+    setLoading(false); // ✅ always stop loading
+  }
 };
 
 return (
   <div className="min-h-screen flex flex-col md:flex-row bg-[#F4F7FA]">
 
     {/* BLUE PANEL */}
-<div className="relative w-full md:w-1/2 bg-gradient-to-b from-[#0B1C2D] to-[#12344D] text-white flex flex-col justify-center items-center px-8 md:px-16 py-20 md:py-0 overflow-hidden">
+<div className="relative w-full md:w-1/2 bg-gradient-to-b from-[#0B1C2D] to-[#12344D] text-white flex flex-col justify-center items-center px-8 md:px-16 py-20 md:py-0 pb-32 overflow-hidden">
 
   {/* Content Wrapper */}
-  <div className="flex flex-col items-center text-center space-y-6">
+  <div className="flex flex-col items-center text-center space-y-6 z-10">
 
     {/* Logo */}
     <img
@@ -88,7 +188,7 @@ return (
 
     {/* Heading */}
     <h1 className="text-3xl md:text-4xl font-bold leading-tight">
-      Join Civix
+      Join FixItNow
     </h1>
 
     {/* Description */}
@@ -147,23 +247,136 @@ return (
             required
           />
 
-          <input
-            type="text"
-            placeholder="Phone Number"
-            className="w-full border-b-2 border-gray-300 py-3 focus:outline-none focus:border-green-500 transition"
-              value={phone}
-  onChange={(e) => setPhone(e.target.value)}
-            required
-          />
+    <input
+  type="email"
+  placeholder="Email Address"
+  className={`w-full border-b-2 py-3 focus:outline-none transition ${
+    emailError
+      ? "border-red-500 focus:border-red-500"
+      : "border-gray-300 focus:border-green-500"
+  }`}
+  value={email}
+  onChange={(e) => {
+    setEmail(e.target.value);
+    setEmailError(""); // clear while typing
+  }}
+  required
+/>
+
+{emailError && (
+  <p className="text-red-500 text-xs mt-1">
+    {emailError}
+  </p>
+)}
+
+          <div className="relative">
+  <input
+    type="text"
+    placeholder="Phone Number"
+    className={`w-full border-b-2 py-3 focus:outline-none transition ${
+      phoneError
+        ? "border-red-500 focus:border-red-500"
+        : "border-gray-300 focus:border-green-500"
+    }`}
+    value={phone}
+    onChange={(e) => {
+  const value = e.target.value;
+  setPhone(value);
+  validatePhone(value);
+}}
+    required
+  />
+
+
+
 
           <input
             type="password"
             placeholder="Password"
             className="w-full border-b-2 border-gray-300 py-3 focus:outline-none focus:border-green-500 transition"
              value={password}
-  onChange={(e) => setPassword(e.target.value)}
+onChange={(e) => {
+  const value = e.target.value;
+  setPassword(value);
+
+  let strength = "Weak";
+
+  if (
+    value.length >= 8 &&
+    /[A-Z]/.test(value) &&
+    /[a-z]/.test(value) &&
+    /\d/.test(value)
+  ) {
+    strength = "Moderate";
+  }
+
+  if (
+    value.length >= 8 &&
+    /[A-Z]/.test(value) &&
+    /[a-z]/.test(value) &&
+    /\d/.test(value) &&
+    /[^A-Za-z0-9]/.test(value)
+  ) {
+    strength = "Strong";
+  }
+
+  setPasswordStrength(strength);
+}}
             required
           />
+
+            {password && (
+  <p className={`text-xs mt-1 ${
+    passwordStrength === "Weak"
+      ? "text-red-500"
+      : passwordStrength === "Moderate"
+      ? "text-yellow-500"
+      : "text-green-500"
+  }`}>
+    {passwordStrength} password
+  </p>
+)}
+
+  {/* Red ! Icon */}
+  {phoneError && (
+    <span className="absolute right-2 top-3 text-red-500 font-bold">
+      !
+    </span>
+  )}
+
+  {/* Error Text */}
+  {phoneError && (
+    <p className="text-red-500 text-xs mt-1">
+      {phoneError}
+    </p>
+  )}
+</div>
+
+
+          <input
+  type="password"
+  placeholder="Confirm Password"
+  className={`w-full border-b-2 py-3 focus:outline-none transition ${
+    passwordError
+      ? "border-red-500 focus:border-red-500"
+      : "border-gray-300 focus:border-green-500"
+  }`}
+  value={confirmPassword}
+  onChange={(e) => setConfirmPassword(e.target.value)}
+  required
+/>
+
+{passwordError && (
+  <p className="text-red-500 text-xs mt-1">
+    {passwordError}
+  </p>
+)}
+
+
+
+
+
+
         </div>
 
         <button
@@ -176,11 +389,16 @@ return (
 
 
         <button
-          type="submit"
-          className="w-full mt-8 bg-green-500 text-white py-3 rounded-full font-semibold hover:bg-green-600 transition shadow-md"
-        >
-          Sign Up
-        </button>
+  type="submit"
+  disabled={loading}
+  className={`w-full mt-8 py-3 rounded-full font-semibold transition shadow-md ${
+    loading
+      ? "bg-green-400 cursor-not-allowed"
+      : "bg-green-500 hover:bg-green-600 text-white"
+  }`}
+>
+  {loading ? "Creating Account..." : "Sign Up"}
+</button>
 
         <p className="text-sm text-gray-500 mt-6 text-center">
           Already have an account?{" "}
@@ -217,6 +435,9 @@ return (
         onClick={() => {
           setDialog({ ...dialog, show: false });
 
+          // const [loading, setLoading] = useState(false);
+          // const [toast, setToast] = useState({...});
+
           if (dialog.type === "success") {
             navigate("/login");
           }
@@ -233,6 +454,39 @@ return (
     </div>
   </div>
 )}
+
+
+{/* TOAST NOTIFICATION */}
+{toast.show && (
+  <div className="fixed bottom-6 right-6 z-50">
+    <div
+      className={`flex items-center justify-between min-w-[250px] px-4 py-3 rounded-lg shadow-lg text-white ${
+        toast.type === "error"
+          ? "bg-red-600"
+          : "bg-green-600"
+      }`}
+    >
+      <span className="text-sm font-medium">
+        {toast.message}
+      </span>
+
+      <button
+        onClick={() => setToast({ ...toast, show: false })}
+        className="ml-4 text-white font-bold"
+      >
+        ✕
+      </button>
+    </div>
+  </div>
+)}
+
+
+
+
+
+
+
+
 
   </div>
 );

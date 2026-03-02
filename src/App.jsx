@@ -17,14 +17,31 @@ import ManageComplaints from "./pages/admin/ManageComplaints";
 
 import DeptManageComplaints from "./pages/dept/ManageComplaintsdept";
 
+import RoleSelection from "./pages/RoleSelection";
+import Profile from "./pages/user/Profile";
+
+
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
+
+
+import DepartmentManageComplaints from "./pages/dept/DepartmentManageComplaints";
+
 function App() {
   return (
     <div className="app-container">
       <Routes>
 
+       
+
         {/* Public Routes */}
         <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
+        <Route path="/login" element={<RoleSelection />} />
+<Route path="/login/user" element={<Login type="USER" />} />
+<Route path="/login/admin" element={<Login type="ADMIN" />} />
+<Route path="/login/department" element={<Login type="DEPARTMENT_AUTHORITY" />} />
+
         <Route path="/signup" element={<Signup />} />
 
         {/* ================= USER ROUTES ================= */}
@@ -40,6 +57,7 @@ function App() {
           <Route path="create-issue" element={<CreateIssue />} />
 
              <Route path="my-complaints" element={<MyComplaints />} /> 
+             <Route path="profile" element={<Profile />} /> 
         </Route>
 
         {/* ================= ADMIN ROUTES ================= */}
@@ -62,23 +80,26 @@ function App() {
 
         {/* ================= DEPARTMENT ROUTES ================= */}
         <Route
-          path="/department"
-          element={
-            <ProtectedRoute allowedRoles={["DEPARTMENT_AUTHORITY"]}>
-              <DashboardLayout role="DEPARTMENT_AUTHORITY" />
-            </ProtectedRoute>
-          }
-        >
-          <Route path="dashboard" element={<DepartmentDashboard />} />
-        </Route>
+  path="/department"
+  element={
+    <ProtectedRoute allowedRoles={["DEPARTMENT_AUTHORITY"]}>
+      <DashboardLayout role="DEPARTMENT_AUTHORITY" />
+    </ProtectedRoute>
+  }
+>
+  <Route path="dashboard" element={<DepartmentDashboard />} />
+  <Route path="manage-complaints" element={<DepartmentManageComplaints />} />
+</Route>
 
-        <Route path="manage-complaints" element={<DeptManageComplaints />} />
+        <Route path="manage-complaints" element={<DepartmentManageComplaints />} />
 
 
      
 
 
       </Routes>
+
+       <ToastContainer position="top-right" autoClose={2500} />
     </div>
   );
 }
